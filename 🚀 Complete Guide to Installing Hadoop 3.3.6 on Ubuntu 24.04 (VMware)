@@ -1,0 +1,265 @@
+🚀 Complete Guide to Installing Hadoop 3.3.6 on Ubuntu 24.04 (VMware)
+📘 Overview
+
+This guide helps you install and configure Hadoop 3.3.6 in pseudo-distributed mode on Ubuntu 24.04 running inside VMware.
+It includes SSH setup, Java configuration, environment variables, troubleshooting, and verification steps.
+
+🧩 1️⃣ Prerequisites
+
+Ensure the following before you begin:
+
+✔ Ubuntu 24.04 running in VMware Workstation
+✔ At least 4 GB RAM, 50 GB disk space, and 4 CPU cores
+✔ Java 8 (JDK 1.8.0_368) installed at:
+
+/home/amitkumar/Downloads/jdk1.8.0_368/
+
+🧭 2️⃣ Update Ubuntu Packages
+
+Keep your system up to date:
+
+sudo apt update && sudo apt upgrade -y
+
+☕ 3️⃣ Verify Java Installation
+
+You’ve already installed Java 8 manually. Let’s confirm it:
+
+java -version
+
+
+Expected output:
+
+java version "1.8.0_368"
+Java(TM) SE Runtime Environment (build 1.8.0_368-bXX)
+Java HotSpot(TM) 64-Bit Server VM
+
+
+If not, set JAVA_HOME globally:
+
+sudo nano /etc/environment
+
+
+Add this line:
+
+JAVA_HOME="/home/amitkumar/Downloads/jdk1.8.0_368/"
+
+
+Then reload:
+
+source /etc/environment
+
+
+Check:
+
+echo $JAVA_HOME
+
+🧑‍💻 4️⃣ (Optional) Create Hadoop User
+
+For better security, create a separate user:
+
+sudo adduser hadoop
+sudo usermod -aG sudo hadoop
+su - hadoop
+
+
+If you prefer, continue as your current user (amitkumar).
+
+📦 5️⃣ Download & Install Hadoop 3.3.6
+
+Download Hadoop:
+
+wget https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+
+
+Extract:
+
+tar -xvzf hadoop-3.3.6.tar.gz
+
+
+Move to installation directory:
+
+sudo mv hadoop-3.3.6 /usr/local/hadoop
+
+
+Set ownership:
+
+sudo chown -R $USER:$USER /usr/local/hadoop
+
+⚙️ 6️⃣ Set Hadoop Environment Variables
+
+Edit .bashrc:
+
+nano ~/.bashrc
+
+
+Add at the end:
+
+# Hadoop Environment Variables
+export HADOOP_HOME=/usr/local/hadoop
+export HADOOP_INSTALL=$HADOOP_HOME
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export HADOOP_YARN_HOME=$HADOOP_HOME
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export JAVA_HOME=/home/amitkumar/Downloads/jdk1.8.0_368/
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+
+
+Apply:
+
+source ~/.bashrc
+
+
+Verify:
+
+echo $HADOOP_HOME
+
+
+Expected output:
+
+/usr/local/hadoop
+
+🧩 7️⃣ Configure Hadoop Core Files
+(a) hadoop-env.sh
+nano $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+
+
+Find:
+
+export JAVA_HOME=
+
+
+Replace with:
+
+export JAVA_HOME=/home/amitkumar/Downloads/jdk1.8.0_368/
+
+(b) core-site.xml
+nano $HADOOP_HOME/etc/hadoop/core-site.xml
+
+
+Replace with:
+
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://localhost:9000</value>
+    </property>
+</configuration>
+
+(c) hdfs-site.xml
+nano $HADOOP_HOME/etc/hadoop/hdfs-site.xml
+
+
+Add:
+
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>dfs.name.dir</name>
+        <value>file:///usr/local/hadoop/hdfs/namenode</value>
+    </property>
+    <property>
+        <name>dfs.data.dir</name>
+        <value>file:///usr/local/hadoop/hdfs/datanode</value>
+    </property>
+</configuration>
+
+
+Create directories:
+
+mkdir -p /usr/local/hadoop/hdfs/namenode
+mkdir -p /usr/local/hadoop/hdfs/datanode
+sudo chown -R $USER:$USER /usr/local/hadoop/hdfs
+
+(d) mapred-site.xml
+cp $HADOOP_HOME/etc/hadoop/mapred-site.xml.template $HADOOP_HOME/etc/hadoop/mapred-site.xml
+nano $HADOOP_HOME/etc/hadoop/mapred-site.xml
+
+
+Add:
+
+<configuration>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+    <property>
+        <name>yarn.app.mapreduce.am.env</name>
+        <value>HADOOP_MAPRED_HOME=/usr/local/hadoop</value>
+    </property>
+    <property>
+        <name>mapreduce.map.env</name>
+        <value>HADOOP_MAPRED_HOME=/usr/local/hadoop</value>
+    </property>
+    <property>
+        <name>mapreduce.reduce.env</name>
+        <value>HADOOP_MAPRED_HOME=/usr/local/hadoop</value>
+    </property>
+</configuration>
+
+(e) yarn-site.xml
+nano $HADOOP_HOME/etc/hadoop/yarn-site.xml
+
+
+Add:
+
+<configuration>
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+</configuration>
+
+🔐 8️⃣ Configure Passwordless SSH
+sudo apt install ssh -y
+ssh-keygen -t rsa -P ""
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+ssh localhost
+
+
+If you can log in without a password → ✅ success.
+
+🧱 9️⃣ Format Namenode & Start Hadoop
+Format the HDFS:
+hdfs namenode -format
+
+Start HDFS:
+start-dfs.sh
+
+Start YARN:
+start-yarn.sh
+
+Verify Processes:
+jps
+
+
+Expected output:
+
+NameNode
+DataNode
+ResourceManager
+NodeManager
+
+✅ 🔟 Verify Installation in Browser
+
+📂 HDFS Web UI:
+👉 http://localhost:9870/
+
+🧮 YARN ResourceManager:
+👉 http://localhost:8088/
+
+🧩 11️⃣ Troubleshooting Tips
+Problem	Cause	Fix
+NameNode not starting	Wrong JAVA_HOME	Verify hadoop-env.sh path
+ssh: connect to host localhost port 22	SSH not installed	Run sudo apt install ssh
+Permission denied	Wrong file ownership	sudo chown -R $USER:$USER /usr/local/hadoop
+DataNode refused connection	Ports conflict	Stop and restart all Hadoop daemons
+
+🎉 Congratulations, Amit!
+You have successfully installed and configured Hadoop 3.3.6 on Ubuntu 24.04 (VMware) using your custom JDK 1.8.0_368 setup.
+Your single-node pseudo-distributed Hadoop system is ready for use with HDFS, YARN, and MapReduce.
